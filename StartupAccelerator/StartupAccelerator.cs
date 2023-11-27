@@ -230,7 +230,7 @@ public static class StartupAccelerator
 
 		private static MethodInfo TargetMethod() => postChainloader ? AccessTools.DeclaredMethod(Type.GetType("FejdStartup, assembly_valheim"), "Awake") : AccessTools.DeclaredMethod(typeof(Chainloader), nameof(Chainloader.Start));
 
-		private static bool SkipUpdates(MethodBase original, ref MethodBase __result)
+		private static bool SkipUpdates(MethodBase original, ref MethodInfo? __result)
 		{
 			if (doNotSkipUpdate || (original.DeclaringType is { } type && passthroughClasses.Contains(type.FullName)))
 			{
@@ -238,7 +238,7 @@ public static class StartupAccelerator
 			}
 
 			methods.Add(original);
-			__result = original;
+			__result = null;
 			return false;
 		}
 
