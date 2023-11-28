@@ -37,6 +37,7 @@ public static class StartupAccelerator
 		typeof(Assembly).FullName,
 		"BepInEx.Preloader.RuntimeFixes.HarmonyInteropFix",
 		"BepInEx.PluginInfo",
+		typeof(Enum).FullName,
 	};
 
 	private static HashSet<string> passthroughClasses = new();
