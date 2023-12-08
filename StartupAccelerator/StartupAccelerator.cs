@@ -52,12 +52,12 @@ public static class StartupAccelerator
 		Off,
 	}
 
-	private static readonly List<ConfigFile> changedConfigFiles = new();
+	private static List<ConfigFile> changedConfigFiles = new();
 
 	public static void Initialize()
 	{
 		ConfigEntry<string> passthrough = Config.Bind("General", "Passthrough Patched Classes", "", new ConfigDescription("Comma-separated list of classes to unconditionally patch immediately."));
-		void calcPassthrough() => passthroughClasses = new HashSet<string>(hardcodedPassthrough.Concat(unifiedLocalization.Value == Toggle.On ? new[] { "Localization" } : Array.Empty<string>()).Concat(passthrough.Value.Split(',')));
+		void calcPassthrough() => passthroughClasses = [..hardcodedPassthrough.Concat(unifiedLocalization.Value == Toggle.On ? new[] { "Localization" } : Array.Empty<string>()).Concat(passthrough.Value.Split(','))];
 
 		passthrough.SettingChanged += (_, _) => calcPassthrough();
 		calcPassthrough();
@@ -121,6 +121,7 @@ public static class StartupAccelerator
 				{
 					harmony.PatchAll(typeof(DelayConfigSave));
 					harmony.PatchAll(typeof(ChangeConfigSaveBack));
+					harmony.PatchAll(typeof(SkipManuallyChangedSaveOnConfigSet));
 				}
 			}
 		}
@@ -140,7 +141,7 @@ public static class StartupAccelerator
 			if (localizationCache.TryGetValue(language, out Dictionary<string, string> translations))
 			{
 				___m_translations = translations;
-				if (language == "English" && (string)AccessTools.DeclaredMethod(Type.GetType("UnityEngine.PlayerPrefs, UnityEngine.CoreModule")!, "GetString", new[] { typeof(string), typeof(string) }).Invoke(null, new[] { "language", "English" }) != "English")
+				if (language == "English" && (string)AccessTools.DeclaredMethod(Type.GetType("UnityEngine.PlayerPrefs, UnityEngine.CoreModule")!, "GetString", new[] { typeof(string), typeof(string) }).Invoke(null, new object[] { "language", "English" }) != "English")
 				{
 					foreach (Patch patch in AccessTools.DeclaredMethod(Type.GetType("Localization, assembly_guiutils"), "LoadCSV").ToPatchInfo().postfixes)
 					{
@@ -306,13 +307,28 @@ public static class StartupAccelerator
 
 		private static void Postfix()
 		{
-			foreach (ConfigFile file in changedConfigFiles)
+			List<ConfigFile> configs = changedConfigFiles;
+			changedConfigFiles = [];
+
+			foreach (ConfigFile file in configs)
 			{
 				file.Save();
 				file.SaveOnConfigSet = true;
 			}
+		}
+	}
 
-			changedConfigFiles.Clear();
+	[HarmonyPatch]
+	private static class SkipManuallyChangedSaveOnConfigSet
+	{
+		private static MethodBase TargetMethod() => AccessTools.DeclaredPropertySetter(typeof(ConfigFile), nameof(ConfigFile.SaveOnConfigSet));
+
+		private static void Prefix(ConfigFile __instance)
+		{
+			if (changedConfigFiles.Remove(__instance))
+			{
+				__instance.Save();
+			}
 		}
 	}
 }
