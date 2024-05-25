@@ -305,7 +305,7 @@ public static class StartupAccelerator
 	{
 		private static MethodInfo TargetMethod() => AccessTools.DeclaredMethod(Type.GetType("FejdStartup, assembly_valheim"), "Awake");
 
-		private static void Postfix()
+		private static void Prefix()
 		{
 			List<ConfigFile> configs = changedConfigFiles;
 			changedConfigFiles = [];
